@@ -83,14 +83,15 @@ stage('Deploy to Nexus') {
     steps {
         sh '''
 /opt/maven/bin/mvn deploy:deploy-file \
-  -s ~/.m2/settings.xml \
-  -Durl=$NEXUS_URL/repository/$NEXUS_REPO/ \
+  -Durl=http://localhost:8081/repository/maven-releases/ \
   -DrepositoryId=nexus \
   -Dfile=target/webapp-demo.war \
   -DgroupId=com.example \
   -DartifactId=webapp-demo \
   -Dversion=1.0 \
-  -Dpackaging=war
+  -Dpackaging=war \
+  -Dusername=admin \
+  -Dpassword=12345
         '''
     }
 }
