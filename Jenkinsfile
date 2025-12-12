@@ -82,15 +82,15 @@ pipeline {
 stage('Deploy to Nexus') {
     steps {
         sh '''
-        /opt/maven/bin/mvn deploy:deploy-file \
-          -s ~/.m2/settings.xml \  # ← ЭТА СТРОКА ОБЯЗАТЕЛЬНА
-          -Durl=${NEXUS_URL}/repository/${NEXUS_REPO}/ \
-          -DrepositoryId=nexus \
-          -Dfile=target/webapp-demo.war \
-          -DgroupId=com.example \
-          -DartifactId=webapp-demo \
-          -Dversion=1.0 \
-          -Dpackaging=war
+/opt/maven/bin/mvn deploy:deploy-file \
+  -s ~/.m2/settings.xml \
+  -Durl=$NEXUS_URL/repository/$NEXUS_REPO/ \
+  -DrepositoryId=nexus \
+  -Dfile=target/webapp-demo.war \
+  -DgroupId=com.example \
+  -DartifactId=webapp-demo \
+  -Dversion=1.0 \
+  -Dpackaging=war
         '''
     }
 }
