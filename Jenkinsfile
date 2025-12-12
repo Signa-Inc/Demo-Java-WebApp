@@ -1,9 +1,5 @@
 pipeline {
     agent any
-
-options {
-        cleanWs()  // ← Очищает workspace перед запуском
-    }
     
     environment {
         NEXUS_URL = 'http://78.142.234.25:8081'
