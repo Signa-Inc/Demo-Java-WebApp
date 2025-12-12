@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        NEXUS_URL = 'http://localhost:8081'
+        NEXUS_URL = 'http://78.142.234.25:8081'
         NEXUS_REPO = 'maven-releases'
         TOMCAT_USER = 'admin'
         TOMCAT_PASS = '12345'
