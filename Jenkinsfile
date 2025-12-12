@@ -82,7 +82,8 @@ pipeline {
 stage('Deploy to Nexus') {
     steps {
         sh '''
-        mvn deploy:deploy-file \
+        /opt/maven/bin/mvn deploy:deploy-file \
+          -s ~/.m2/settings.xml \  # ← ЭТА СТРОКА ОБЯЗАТЕЛЬНА
           -Durl=${NEXUS_URL}/repository/${NEXUS_REPO}/ \
           -DrepositoryId=nexus \
           -Dfile=target/webapp-demo.war \
