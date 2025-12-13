@@ -98,7 +98,7 @@ stage('Deploy to Nexus') {
         
 stage('Deploy to Tomcat') {
     steps {
-        sh 'curl -u admin:12345 --upload-file target/webapp-demo.war "http://localhost:8082/manager/text/deploy?path=/webapp-demo"'
+        sh 'curl -u admin:12345 --upload-file target/webapp-demo.war "http://localhost:8082/manager/text/deploy?path=/webapp-demo&update=true"'
     }
 }
     }
