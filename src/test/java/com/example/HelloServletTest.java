@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.containsString;
 
-public class HelloServletIntegrationTest {
+public class HelloServletTest {
 
     private static Tomcat tomcat;
     private static int port = 0;
