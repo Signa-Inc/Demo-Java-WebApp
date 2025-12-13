@@ -12,7 +12,12 @@ pipeline {
     }
     
     stages {
-        // ... остальные стадии без изменений ...
+
+stage('Build') {
+    steps {
+        sh '/opt/maven/bin/mvn clean package'
+    }
+}
         
         stage('Deploy to Nexus') {
             steps {
@@ -89,7 +94,7 @@ pipeline {
         }
         failure {
             echo "Пайплайн завершился с ошибкой! Требуется вмешательство."
-            // Здесь можно добавить уведомление в Slack/Telegram/email
+           sh 'echo "=== TOMCAT LOGS ==="; cat /opt/tomcat/logs/catalina.out'
         }
     }
 }
