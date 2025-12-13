@@ -14,18 +14,38 @@ pipeline {
     }
     
     stages {
-stage('Build and Test') {
+stage('Build') {
     steps {
         sh '''
             export JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
             export PATH=$JAVA_HOME/bin:$PATH
-            /opt/maven/bin/mvn clean verify
+            /opt/maven/bin/mvn compile
+        '''
+    }
+}
+
+stage('Test') {
+    steps {
+        sh '''
+            export JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
+            export PATH=$JAVA_HOME/bin:$PATH
+            /opt/maven/bin/mvn test
         '''
     }
     post {
         always {
             archiveArtifacts artifacts: 'target/surefire-reports/**', allowEmptyArchive: true
         }
+    }
+}
+
+stage('Package') {
+    steps {
+        sh '''
+            export JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
+            export PATH=$JAVA_HOME/bin:$PATH
+            /opt/maven/bin/mvn package -DskipTests
+        '''
     }
 }
         
@@ -127,7 +147,6 @@ stage('Build and Test') {
         failure {
             echo "Пайплайн завершился с ошибкой! Требуется вмешательство."
             sh 'echo "=== TOMCAT LOGS ==="; cat /opt/tomcat/logs/catalina.out || echo "Cannot access logs directly, trying Tomcat manager API"'
-            sh '''curl -s -u ${TOMCAT_USER}:${TOMCAT_PASS} "${TOMCAT_URL}/getlog?path=${APP_CONTEXT}" || echo "Cannot get logs via API"'''
         }
     }
 }
