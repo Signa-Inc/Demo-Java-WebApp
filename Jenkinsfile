@@ -82,16 +82,16 @@ pipeline {
 stage('Deploy to Nexus') {
     steps {
         sh '''
-/opt/maven/bin/mvn deploy:deploy-file \
-  -Durl=http://localhost:8081/repository/maven-releases/ \
-  -DrepositoryId=nexus \
-  -Dfile=target/webapp-demo.war \
-  -DgroupId=com.example \
-  -DartifactId=webapp-demo \
-  -Dversion=1.0 \
-  -Dpackaging=war \
-  -Dusername=admin \
-  -Dpassword=f71ed0f4-6914-4f8b-9a27-eda2bc3a076d
+        /opt/maven/bin/mvn deploy:deploy-file \
+          -Durl=http://localhost:8081/repository/maven-snapshots/ \
+          -DrepositoryId=nexus \
+          -Dfile=target/webapp-demo.war \
+          -DgroupId=com.example \
+          -DartifactId=webapp-demo \
+          -Dversion=1.0-SNAPSHOT \
+          -Dpackaging=war \
+          -Dusername=admin \
+          -Dpassword=f71ed0f4-6914-4f8b-9a27-eda2bc3a076d
         '''
     }
 }
