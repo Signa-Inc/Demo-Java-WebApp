@@ -3,7 +3,9 @@ pipeline {
     
     environment {
         NEXUS_URL = 'http://localhost:8081'
-        NEXUS_SNAPSHOT_REPO = 'maven-snapshots'  // Исправлено на snapshot
+        NEXUS_SNAPSHOT_REPO = 'maven-snapshots'
+        NEXUS_USER = 'admin'  // Правильные учетные данные Nexus
+        NEXUS_PASS = '12345'  // Замени на реальный пароль Nexus
         TOMCAT_USER = 'admin'
         TOMCAT_PASS = '12345'
         TOMCAT_URL = 'http://localhost:8082/manager/text'
@@ -12,10 +14,13 @@ pipeline {
     }
     
     stages {
-
-stage('Build') {
+        stage('Build') {
     steps {
-        sh '/opt/maven/bin/mvn clean package'
+        sh '''
+            export JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
+            export PATH=$JAVA_HOME/bin:$PATH
+            /opt/maven/bin/mvn clean package -DskipTests
+        '''
     }
 }
         
@@ -30,8 +35,8 @@ stage('Build') {
                   -DartifactId=webapp-demo \
                   -Dversion=1.0-SNAPSHOT \
                   -Dpackaging=war \
-                  -Dusername=${TOMCAT_USER} \
-                  -Dpassword=${TOMCAT_PASS}
+                  -Dusername=${NEXUS_USER} \
+                  -Dpassword=${NEXUS_PASS}
                 '''
             }
         }
@@ -46,7 +51,6 @@ stage('Build') {
                         returnStdout: true
                     ).trim()
                     
-                    // Разделяем ответ и HTTP код
                     def responseLines = deployResponse.readLines()
                     def httpCode = responseLines[-1]
                     def responseMessage = responseLines[0..-2].join('\n')
@@ -54,7 +58,6 @@ stage('Build') {
                     echo "Tomcat deployment response: ${responseMessage}"
                     echo "HTTP Status Code: ${httpCode}"
                     
-                    // Проверяем успешность операции
                     if (httpCode != "200" || responseMessage.contains("FAIL")) {
                         error("Deployment to Tomcat failed: ${responseMessage}")
                     }
@@ -65,23 +68,47 @@ stage('Build') {
         stage('Verify Application') {
             steps {
                 script {
-                    // Ждем пока приложение запустится
-                    sleep time: 10, unit: 'SECONDS'
+                    // Увеличим время ожидания для полной инициализации приложения
+                    echo "Waiting for application to fully initialize..."
+                    sleep time: 30, unit: 'SECONDS'
                     
-                    // Проверяем доступность приложения
-                    def appUrl = "http://localhost:8082${APP_CONTEXT}/hello"
-                    def healthCheck = sh(
-                        script: "curl -s -o /dev/null -w '%{http_code}' ${appUrl}",
-                        returnStdout: true
-                    ).trim()
+                    // Попробуем несколько раз проверить доступность приложения
+                    def maxAttempts = 5
+                    def attempt = 0
+                    def healthCheckSuccess = false
                     
-                    echo "Application health check result: ${healthCheck}"
+                    while (attempt < maxAttempts && !healthCheckSuccess) {
+                        attempt++
+                        echo "Health check attempt ${attempt} of ${maxAttempts}"
+                        
+                        def appUrl = "http://localhost:8082${APP_CONTEXT}/hello"
+                        def healthCheck = sh(
+                            script: "curl -s -o /dev/null -w '%{http_code}' ${appUrl}",
+                            returnStdout: true
+                        ).trim()
+                        
+                        echo "Application health check result: ${healthCheck}"
+                        
+                        if (healthCheck == "200") {
+                            healthCheckSuccess = true
+                            echo "Application is up and running!"
+                        } else {
+                            sleep time: 10, unit: 'SECONDS'
+                        }
+                    }
                     
-                    if (healthCheck != "200") {
-                        // Попробуем получить логи для отладки
+                    if (!healthCheckSuccess) {
+                        // Получить детальную информацию о приложении из Tomcat
+                        echo "Getting detailed application status from Tomcat..."
                         sh '''curl -u ${TOMCAT_USER}:${TOMCAT_PASS} \
                         "${TOMCAT_URL}/list"'''
-                        error("Application failed to start. Health check returned: ${healthCheck}")
+                        
+                        // Попробовать получить логи приложения
+                        echo "Getting application logs..."
+                        sh '''curl -u ${TOMCAT_USER}:${TOMCAT_PASS} \
+                        "${TOMCAT_URL}/getlog?path=${APP_CONTEXT}"'''
+                        
+                        error("Application failed to start after ${maxAttempts} attempts")
                     }
                 }
             }
@@ -90,11 +117,12 @@ stage('Build') {
     
     post {
         success {
-            echo "Пайплайн успешно завершён! Приложение доступно по адресу: http://78.142.234.25:8082${APP_CONTEXT}/hello"
+            echo "Пайплайн успешно завершён! Приложение доступно по адресу: http://localhost:8082${APP_CONTEXT}/hello"
         }
         failure {
             echo "Пайплайн завершился с ошибкой! Требуется вмешательство."
-           sh 'echo "=== TOMCAT LOGS ==="; cat /opt/tomcat/logs/catalina.out'
+            sh 'echo "=== TOMCAT LOGS ==="; cat /opt/tomcat/logs/catalina.out || echo "Cannot access logs directly, trying Tomcat manager API"'
+            sh '''curl -s -u ${TOMCAT_USER}:${TOMCAT_PASS} "${TOMCAT_URL}/getlog?path=${APP_CONTEXT}" || echo "Cannot get logs via API"'''
         }
     }
 }

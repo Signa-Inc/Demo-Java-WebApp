@@ -1,8 +1,8 @@
 package com.example;
 
 import java.io.*;
-import jakarta.servlet.http.*;
-import jakarta.servlet.annotation.*;
+import javax.servlet.http.*;
+import javax.servlet.annotation.*;
 
 @WebServlet("/hello")
 public class HelloServlet extends HttpServlet {
