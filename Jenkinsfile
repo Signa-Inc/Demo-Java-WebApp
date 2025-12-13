@@ -91,7 +91,7 @@ stage('Deploy to Nexus') {
           -Dversion=1.0-SNAPSHOT \
           -Dpackaging=war \
           -Dusername=admin \
-          -Dpassword=f71ed0f4-6914-4f8b-9a27-eda2bc3a076d
+          -Dpassword=12345
         '''
     }
 }
