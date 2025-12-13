@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        NEXUS_URL = 'http://78.142.234.25:8081'
+        NEXUS_URL = 'http://localhost:8081'
         NEXUS_REPO = 'maven-releases'
         TOMCAT_USER = 'admin'
         TOMCAT_PASS = '12345'
@@ -83,7 +83,7 @@ stage('Deploy to Nexus') {
     steps {
         sh '''
 /opt/maven/bin/mvn deploy:deploy-file \
-  -Durl=http://78.142.234.25:8081/repository/maven-releases/ \
+  -Durl=http://localhost:8081/repository/maven-releases/ \
   -DrepositoryId=nexus \
   -Dfile=target/webapp-demo.war \
   -DgroupId=com.example \
@@ -91,7 +91,7 @@ stage('Deploy to Nexus') {
   -Dversion=1.0 \
   -Dpackaging=war \
   -Dusername=admin \
-  -Dpassword=admin123
+  -Dpassword=f71ed0f4-6914-4f8b-9a27-eda2bc3a076d
         '''
     }
 }
