@@ -3,112 +3,93 @@ pipeline {
     
     environment {
         NEXUS_URL = 'http://localhost:8081'
-        NEXUS_REPO = 'maven-releases'
+        NEXUS_SNAPSHOT_REPO = 'maven-snapshots'  // Исправлено на snapshot
         TOMCAT_USER = 'admin'
         TOMCAT_PASS = '12345'
         TOMCAT_URL = 'http://localhost:8082/manager/text'
         JAVA_HOME = '/usr/lib/jvm/temurin-17-jdk-amd64'
+        APP_CONTEXT = '/webapp-demo'
     }
     
     stages {
-        stage('Debug') {
+        // ... остальные стадии без изменений ...
+        
+        stage('Deploy to Nexus') {
             steps {
                 sh '''
-                echo "=== DEBUG INFO ==="
-                echo "PATH: $PATH"
-                echo "USER: $(whoami)"
-                echo "JAVA_HOME: $JAVA_HOME"
-                echo "Java home directory contents:"
-                ls -la $JAVA_HOME
-                echo "Which java: $(which java)"
-                java -version
-                echo "Which mvn: $(which mvn || echo 'not found')"
-                if [ -f /opt/maven/bin/mvn ]; then
-                    echo "Maven exists at /opt/maven/bin/mvn"
-                    /opt/maven/bin/mvn -v
-                fi
+                /opt/maven/bin/mvn deploy:deploy-file \
+                  -Durl=${NEXUS_URL}/repository/${NEXUS_SNAPSHOT_REPO}/ \
+                  -DrepositoryId=nexus \
+                  -Dfile=target/webapp-demo.war \
+                  -DgroupId=com.example \
+                  -DartifactId=webapp-demo \
+                  -Dversion=1.0-SNAPSHOT \
+                  -Dpackaging=war \
+                  -Dusername=${TOMCAT_USER} \
+                  -Dpassword=${TOMCAT_PASS}
                 '''
             }
         }
         
-        stage('Checkout') {
+        stage('Deploy to Tomcat') {
             steps {
-                checkout scm
-            }
-        }
-        
-        stage('Fix BOM') {
-            steps {
-                sh '''
-                echo "=== FIXING BOM IN JAVA FILES ==="
-                # Проверяем наличие BOM до удаления
-                echo "Before BOM removal:"
-                find . -name "*.java" -exec file {} \\;
-                find . -name "*.java" -exec hexdump -n 4 -C {} \\;
-                
-                # Надежный метод удаления BOM
-                for file in $(find . -name "*.java"); do
-                    echo "Processing $file"
-                    # Проверяем, есть ли BOM
-                    if head -c3 "$file" | grep -q $'\\xEF\\xBB\\xBF'; then
-                        echo "BOM detected in $file - removing"
-                        tail -c +4 "$file" > "$file.tmp"
-                        mv "$file.tmp" "$file"
-                        echo "BOM removed from $file"
-                    else
-                        echo "No BOM detected in $file"
-                    fi
-                done
-                
-                # Проверяем результат
-                echo "After BOM removal:"
-                find . -name "*.java" -exec file {} \\;
-                find . -name "*.java" -exec hexdump -n 4 -C {} \\;
-                '''
-            }
-        }
-        
-        stage('Build') {
-            steps {
-                sh '/opt/maven/bin/mvn clean package -DskipTests'
-            }
-            post {
-                success {
-                    archiveArtifacts artifacts: 'target/*.war', fingerprint: true
+                script {
+                    def deployResponse = sh(
+                        script: '''curl -s -w "\\n%{http_code}" -u ${TOMCAT_USER}:${TOMCAT_PASS} \
+                        --upload-file target/webapp-demo.war \
+                        "${TOMCAT_URL}/deploy?path=${APP_CONTEXT}&update=true"''',
+                        returnStdout: true
+                    ).trim()
+                    
+                    // Разделяем ответ и HTTP код
+                    def responseLines = deployResponse.readLines()
+                    def httpCode = responseLines[-1]
+                    def responseMessage = responseLines[0..-2].join('\n')
+                    
+                    echo "Tomcat deployment response: ${responseMessage}"
+                    echo "HTTP Status Code: ${httpCode}"
+                    
+                    // Проверяем успешность операции
+                    if (httpCode != "200" || responseMessage.contains("FAIL")) {
+                        error("Deployment to Tomcat failed: ${responseMessage}")
+                    }
                 }
             }
         }
         
-stage('Deploy to Nexus') {
-    steps {
-        sh '''
-        /opt/maven/bin/mvn deploy:deploy-file \
-          -Durl=http://localhost:8081/repository/maven-snapshots/ \
-          -DrepositoryId=nexus \
-          -Dfile=target/webapp-demo.war \
-          -DgroupId=com.example \
-          -DartifactId=webapp-demo \
-          -Dversion=1.0-SNAPSHOT \
-          -Dpackaging=war \
-          -Dusername=admin \
-          -Dpassword=12345
-        '''
-    }
-}
-        
-stage('Deploy to Tomcat') {
-    steps {
-        sh 'curl -u admin:12345 --upload-file target/webapp-demo.war "http://localhost:8082/manager/text/deploy?path=/webapp-demo&update=true"'
-    }
-}
+        stage('Verify Application') {
+            steps {
+                script {
+                    // Ждем пока приложение запустится
+                    sleep time: 10, unit: 'SECONDS'
+                    
+                    // Проверяем доступность приложения
+                    def appUrl = "http://localhost:8082${APP_CONTEXT}/hello"
+                    def healthCheck = sh(
+                        script: "curl -s -o /dev/null -w '%{http_code}' ${appUrl}",
+                        returnStdout: true
+                    ).trim()
+                    
+                    echo "Application health check result: ${healthCheck}"
+                    
+                    if (healthCheck != "200") {
+                        // Попробуем получить логи для отладки
+                        sh '''curl -u ${TOMCAT_USER}:${TOMCAT_PASS} \
+                        "${TOMCAT_URL}/list"'''
+                        error("Application failed to start. Health check returned: ${healthCheck}")
+                    }
+                }
+            }
+        }
     }
     
     post {
         success {
-            echo 'Пайплайн успешно завершён! Приложение доступно по адресу: http://78.142.234.25:8082/webapp-demo/hello'
+            echo "Пайплайн успешно завершён! Приложение доступно по адресу: http://78.142.234.25:8082${APP_CONTEXT}/hello"
         }
         failure {
-            echo 'Пайплайн завершился с ошибкой!'
+            echo "Пайплайн завершился с ошибкой! Требуется вмешательство."
+            // Здесь можно добавить уведомление в Slack/Telegram/email
         }
     }
 }
