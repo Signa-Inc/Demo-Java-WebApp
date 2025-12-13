@@ -14,13 +14,18 @@ pipeline {
     }
     
     stages {
-        stage('Build') {
+stage('Build and Test') {
     steps {
         sh '''
             export JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64
             export PATH=$JAVA_HOME/bin:$PATH
-            /opt/maven/bin/mvn clean package -DskipTests
+            /opt/maven/bin/mvn clean verify
         '''
+    }
+    post {
+        always {
+            archiveArtifacts artifacts: 'target/surefire-reports/**', allowEmptyArchive: true
+        }
     }
 }
         
