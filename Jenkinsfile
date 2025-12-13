@@ -97,14 +97,10 @@ stage('Deploy to Nexus') {
 }
         
         stage('Deploy to Tomcat') {
-            steps {
-                sh '''
-                curl -u ${TOMCAT_USER}:${TOMCAT_PASS} \
-                  -F "deployWar=@target/webapp-demo.war" \
-                  "${TOMCAT_URL}/deploy?path=/webapp-demo"
-                '''
-            }
-        }
+    steps {
+        sh 'cp target/webapp-demo.war /var/lib/tomcat10/webapps/webapp-demo.war'
+    }
+}
     }
     
     post {
