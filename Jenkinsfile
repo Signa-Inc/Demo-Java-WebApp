@@ -6,7 +6,7 @@ pipeline {
         NEXUS_REPO = 'maven-releases'
         TOMCAT_USER = 'admin'
         TOMCAT_PASS = '12345'
-        TOMCAT_URL = 'http://78.142.234.25:8082/manager/text'
+        TOMCAT_URL = 'http://localhost:8082/manager/text'
         JAVA_HOME = '/usr/lib/jvm/temurin-17-jdk-amd64'
     }
     
