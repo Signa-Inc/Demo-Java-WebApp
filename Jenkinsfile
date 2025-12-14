@@ -21,6 +21,7 @@ stage('Build') {
             export PATH=$JAVA_HOME/bin:$PATH
             /opt/maven/bin/mvn compile
         '''
+	echo "✅ Stage 'Build' is success complete!"
     }
 }
 
@@ -31,6 +32,7 @@ stage('Test') {
             export PATH=$JAVA_HOME/bin:$PATH
             /opt/maven/bin/mvn test
         '''
+	    echo "✅ Stage 'Test' is success complete!"
     }
     post {
         always {
@@ -46,6 +48,7 @@ stage('Package') {
             export PATH=$JAVA_HOME/bin:$PATH
             /opt/maven/bin/mvn package -DskipTests
         '''
+	    echo "✅ Stage 'Package' is success complete!"
     }
 }
         
@@ -63,6 +66,7 @@ stage('Package') {
                   -Dusername=${NEXUS_USER} \
                   -Dpassword=${NEXUS_PASS}
                 '''
+	    echo "✅ Stage 'Deploy to Nexus' is success complete!"
             }
         }
         
@@ -87,6 +91,7 @@ stage('Package') {
                         error("Deployment to Tomcat failed: ${responseMessage}")
                     }
                 }
+	    echo "✅ Stage 'Deploy to Tomcat' is success complete!"
             }
         }
         
@@ -136,16 +141,17 @@ stage('Package') {
                         error("Application failed to start after ${maxAttempts} attempts")
                     }
                 }
+	    echo "✅ Stage 'Verify Application' is success complete!"
             }
         }
     }
     
     post {
         success {
-            echo "Пайплайн успешно завершён! Приложение доступно по адресу: http://localhost:8082${APP_CONTEXT}/hello"
+            echo "✅ Пайплайн успешно завершён! Приложение доступно по адресу: http://localhost:8082${APP_CONTEXT}/hello"
         }
         failure {
-            echo "Пайплайн завершился с ошибкой! Требуется вмешательство."
+            echo "❌ Пайплайн завершился с ошибкой! Требуется вмешательство."
             sh 'echo "=== TOMCAT LOGS ==="; cat /opt/tomcat/logs/catalina.out || echo "Cannot access logs directly, trying Tomcat manager API"'
         }
     }
